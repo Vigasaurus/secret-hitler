@@ -520,6 +520,12 @@ const updateSeatedUser = (socket, passport, data) => {
 
 			socket.emit('updateSeatForUser', true);
 			checkStartConditions(game);
+			const gameToSend = {
+				gameState: game.gameState,
+				general: game.general,
+				publicPlayersState: game.publicPlayersState
+			};
+			socket.emit('receiveUserGameInfo', gameToSend);
 			updateUserStatus(passport, game);
 			io.sockets.in(data.uid).emit('gameUpdate', secureGame(game));
 			sendGameList();
@@ -2132,6 +2138,37 @@ module.exports.handleUpdateWhitelist = (passport, game, data) => {
 module.exports.handleNewGeneralChat = (socket, passport, data, modUserNames, editorUserNames, adminUserNames) => {
 	const user = userList.find(u => u.userName === passport.user);
 	if (!user || user.isPrivate) return;
+	if (Object.values(games).length > 0) {
+		const game = Object.values(games).find(game => game.publicPlayersState.find(u => u.userName === user.userName));
+		if (game) {
+			socket.emit('receiveUserGameInfo', {
+				gameState: game.gameState,
+				general: game.general,
+				publicPlayersState: game.publicPlayersState
+			});
+		} else {
+			socket.emit('receiveUserGameInfo', null);
+		}
+
+		const { publicPlayersState } = game;
+		const isDead = () => {
+			if (user.userName && publicPlayersState.length && publicPlayersState.find(player => user.userName === player.userName)) {
+				return publicPlayersState.find(player => user.userName === player.userName).isDead;
+			}
+		};
+		const disableChat = game.general.disableChat;
+		const isCompleted = game.gameState.isCompleted;
+		const isStarted = game.gameState.isStarted;
+		console.log(user.userName, 'Chat: ', disableChat, 'isCompleted: ', isCompleted, 'isStarted: ', isStarted, 'isDead: ', isDead());
+		if (user.staffRole === '') {
+			if (isDead() && !isCompleted) {
+				return;
+			}
+			if (disableChat && !isCompleted && isStarted) {
+				return;
+			}
+		}
+	}
 
 	if (!data.chat) return;
 	data.chat = data.chat.trim();

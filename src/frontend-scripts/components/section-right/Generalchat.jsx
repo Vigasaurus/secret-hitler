@@ -12,13 +12,16 @@ export default class Generalchat extends React.Component {
 		stickyEnabled: true,
 		badWord: [null, null],
 		textLastChanged: 0,
-		textChangeTimer: -1
+		textChangeTimer: -1,
+		gameInfo: null
 	};
 
 	componentDidMount() {
 		if (this.scrollbar) {
 			this.scrollbar.scrollToBottom();
 		}
+
+		this.props.socket.on('receiveUserGameInfo', info => this.setState({ gameInfo: info }));
 	}
 
 	componentWillReceiveProps(nextProps) {
@@ -145,11 +148,78 @@ export default class Generalchat extends React.Component {
 		}
 	};
 
+	chatStatus = () => {
+		const { userInfo } = this.props;
+		const { userName } = userInfo;
+		const user = Object.keys(this.props.userList).length ? this.props.userList.list.find(play => play.userName === userName) : undefined;
+
+		if (!userName) {
+			return {
+				isDisabled: true,
+				placeholder: 'You must log in to use chat'
+			};
+		}
+
+		if (!user) {
+			return {
+				isDisabled: true,
+				placeholder: 'Please reload...'
+			};
+		}
+		if (!this.state.gameInfo) {
+			return {
+				isDisabled: false,
+				placeholder: 'Send a message'
+			};
+		}
+		const { gameInfo } = this.state;
+		const { gameState, publicPlayersState } = gameInfo;
+
+		const isDead = () => {
+			if (userName && publicPlayersState.length && publicPlayersState.find(player => userName === player.userName)) {
+				return publicPlayersState.find(player => userName === player.userName).isDead;
+			}
+		};
+		const isStaff = Boolean(userInfo.staffRole && userInfo.staffRole.length && userInfo.staffRole !== 'trialmod' && userInfo.staffRole !== 'altmod');
+
+		if ((isDead() || gameInfo.general.disableChat) && isStaff) {
+			return {
+				isDisabled: false,
+				placeholder: 'Send a staff message'
+			};
+		}
+
+		if (isDead() && !gameState.isCompleted) {
+			return {
+				isDisabled: true,
+				placeholder: 'Dead men tell no tales'
+			};
+		}
+
+		if (gameInfo.general.disableChat && !gameState.isCompleted && gameState.isStarted) {
+			return {
+				isDisabled: true,
+				placeholder: `Your game's chat is disabled`
+			};
+		}
+		if (user.wins + user.losses < 2) {
+			return {
+				isDisabled: true,
+				placeholder: 'You must finish two games to use general chat'
+			};
+		}
+
+		return {
+			isDisabled: false,
+			placeholder: 'Send a message'
+		};
+	};
+
 	renderInput() {
 		const { userInfo } = this.props;
 
 		return this.state.discordEnabled ? null : (
-			<div className={userInfo.userName ? 'ui action input' : 'ui action input disabled'}>
+			<div className={this.chatStatus().isDisabled ? 'ui action input disabled' : 'ui action input'}>
 				{this.state.badWord[0] && (
 					<span
 						style={{
@@ -169,16 +239,16 @@ export default class Generalchat extends React.Component {
 					style={{ zIndex: 1 }}
 					disabled={!userInfo.userName || (userInfo.gameSettings && userInfo.gameSettings.isPrivate)}
 					className="chat-input-box"
-					placeholder="Send a message"
+					placeholder={this.chatStatus().placeholder}
 					maxLength="300"
 					spellCheck="false"
 					onKeyDown={this.handleKeyPress}
 					onChange={this.handleTyping}
 					ref={c => (this.chatInput = c)}
 				/>
-				{userInfo.userName ? renderEmotesButton(this.handleInsertEmote, this.props.allEmotes) : null}
+				{!this.chatStatus().isDisabled ? renderEmotesButton(this.handleInsertEmote, this.props.allEmotes) : null}
 				<div className="chat-button">
-					<button onClick={this.handleSubmit} className={`ui primary button ${this.chatDisabled() ? 'disabled' : ''}`}>
+					<button onClick={this.handleSubmit} className={`ui primary button ${this.chatDisabled() || this.chatStatus.isDisabled ? 'disabled' : ''}`}>
 						Chat
 					</button>
 				</div>
