@@ -17,8 +17,9 @@ const combineInProgressChats = (game, userName) =>
 /**
  * @param {object} game - game to act on.
  * @param {boolean} noChats - remove chats for client to handle.
+ * @param {boolean} notifyAEMObservers - whether or not to notify
  */
-module.exports.sendInProgressGameUpdate = (game, noChats) => {
+module.exports.sendInProgressGameUpdate = (game, noChats, notifyAEMObservers) => {
 	if (!game || !io.sockets.adapter.rooms[game.general.uid]) {
 		return;
 	}
@@ -69,6 +70,7 @@ module.exports.sendInProgressGameUpdate = (game, noChats) => {
 			const _game = Object.assign({}, game);
 			const user = sock.handshake.session.passport ? sock.handshake.session.passport.user : null;
 
+			console.log('Sending Game State to: ', user);
 			if (noChats) {
 				delete _game.chats;
 				sock.emit('gameUpdate', secureGame(_game), true);

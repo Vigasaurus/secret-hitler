@@ -73,10 +73,15 @@ class Players extends React.Component {
 	};
 
 	handlePlayerClick = e => {
-		const { userInfo, gameInfo, socket } = this.props;
+		const { userInfo, gameInfo, socket, staffEntry } = this.props;
 		const { gameState } = gameInfo;
 		const { phase, clickActionInfo } = gameState;
 		const index = parseInt($(e.currentTarget).attr('data-index'), 10);
+
+		if (staffEntry) {
+			window.alert('You are in this completed/abandoned game as a moderator. ');
+			return;
+		}
 
 		if (phase === 'selectingChancellor' && userInfo.userName) {
 			if (clickActionInfo[0] === userInfo.userName && clickActionInfo[1].includes(index)) {
@@ -194,13 +199,13 @@ class Players extends React.Component {
 	}
 
 	renderPlayers() {
-		const { gameInfo, userInfo } = this.props;
+		const { gameInfo, userInfo, staffEntry } = this.props;
 		const { gameSettings } = userInfo;
 		const { playersState, gameState, publicPlayersState } = gameInfo;
 		const isBlind = gameInfo.general.blindMode && !gameInfo.gameState.isCompleted;
 		const time = Date.now();
 		const renderPlayerName = (player, i) => {
-			const userName = isBlind ? (gameInfo.gameState.isTracksFlipped ? gameInfo.general.replacementNames[i] : '?') : player.userName;
+			const userName = isBlind && !staffEntry ? (gameInfo.gameState.isTracksFlipped ? gameInfo.general.replacementNames[i] : '?') : player.userName;
 			const prependSeasonAward = () => {
 				switch (player.previousSeasonAward) {
 					case 'bronze':
@@ -313,13 +318,13 @@ class Players extends React.Component {
 							classes = `${classes} ${publicPlayersState[i].nameStatus}`;
 						}
 
-						if (publicPlayersState[i].leftGame) {
+						if (publicPlayersState[i].leftGame && !this.props.staffEntry) {
 							classes = `${classes} leftgame`;
-						} else if (!publicPlayersState[i].connected) {
+						} else if (!publicPlayersState[i].connected && !this.props.staffEntry) {
 							classes = `${classes} disconnected`;
 						}
 
-						if (userInfo.gameSettings && userInfo.gameSettings.blacklist.includes(player.userName)) {
+						if (userInfo.gameSettings && userInfo.gameSettings.blacklist.includes(player.userName) && !this.props.staffEntry) {
 							classes = `${classes} blacklisted`;
 						}
 
@@ -330,7 +335,7 @@ class Players extends React.Component {
 				</div>
 				{this.renderPreviousGovtToken(i)}
 				{this.renderLoader(i)}
-				{this.renderTyping(player)}
+				{!this.props.staffEntry && this.renderTyping(player)}
 				{this.renderGovtToken(i)}
 				{/* {this.renderPlayerNotesIcon(i)} */}
 				<div
@@ -402,9 +407,10 @@ class Players extends React.Component {
 
 		if (
 			!userInfo.isSeated &&
+			!this.props.staffEntry &&
 			userInfo.userName &&
 			!gameInfo.gameState.isTracksFlipped &&
-			gameInfo.publicPlayersState.length < 10 &&
+			gameInfo.publicPlayersState.length < gameInfo.general.maxPlayersCount &&
 			(!userInfo.userName || !gameInfo.publicPlayersState.find(player => player.userName === userInfo.userName)) &&
 			(!gameInfo.general.rainbowgame || (user && user.wins + user.losses > 49)) &&
 			(userInfo.gameSettings && (!userInfo.gameSettings.isPrivate || gameInfo.general.private)) &&

@@ -11,11 +11,13 @@ import { IsTypingContext } from '../reusable/Context';
 
 export default class Game extends React.Component {
 	state = {
-		isTyping: {}
+		isTyping: {},
+		staffEntry: false
 	};
 
 	componentDidMount() {
-		const { userInfo } = this.props;
+		const { userInfo, gameInfo, socket } = this.props;
+		const isStaff = Boolean(userInfo.staffRole && userInfo.staffRole.length && userInfo.staffRole !== 'altmod');
 
 		if (userInfo && userInfo.userName && userInfo.gameSettings && !userInfo.gameSettings.disableTyping) {
 			const { isTyping } = this.state;
@@ -31,10 +33,24 @@ export default class Game extends React.Component {
 				}
 			});
 		}
+
+		if (!gameInfo.publicPlayersState.length && isStaff) {
+			this.setState({ staffEntry: true });
+		}
+
+		// socket.on('modDeleteUpdate', () => {
+		// 	console.log('Updating', isStaff);
+		// 	if (isStaff) {
+		// 		this.setState({ staffEntry: true });
+		// 	} else {
+		// 		window.location.hash = '#/';
+		// 	}
+		// });
 	}
 
 	componentDidUpdate(prevProps) {
 		const { userInfo, gameInfo } = this.props;
+		const isStaff = Boolean(userInfo.staffRole && userInfo.staffRole.length && userInfo.staffRole !== 'altmod');
 
 		if (
 			(userInfo.isSeated && gameInfo.gameState && gameInfo.gameState.isTracksFlipped && !prevProps.gameInfo.gameState.isTracksFlipped) ||
@@ -108,10 +124,7 @@ export default class Game extends React.Component {
 		}
 
 		// All players have left the game, so we will return the observer to the main screen.
-		if (
-			(!gameInfo.publicPlayersState.length && !(gameInfo.general.isTourny && gameInfo.general.tournyInfo.round === 0)) ||
-			(gameInfo.general.isTourny && gameInfo.general.tournyInfo.round === 0 && !gameInfo.general.tournyInfo.queuedPlayers.length)
-		) {
+		if (!gameInfo.publicPlayersState.length && !isStaff) {
 			window.location.hash = '#/';
 		}
 	}
@@ -131,7 +144,7 @@ export default class Game extends React.Component {
 
 	render() {
 		const { userInfo, gameInfo } = this.props;
-		const { isTyping } = this.state;
+		const { isTyping, staffEntry } = this.state;
 
 		return (
 			<IsTypingContext.Provider value={{ isTyping, updateIsTyping: this.updateIsTyping }}>
@@ -143,9 +156,17 @@ export default class Game extends React.Component {
 							</div>
 							<div className="chat-container game-chat transition">
 								<section className={gameInfo.general && gameInfo.general.isTourny ? 'gamestatus tourny' : 'gamestatus'}>
-									{gameInfo.general && gameInfo.general.status}
+									{!this.state.staffEntry && gameInfo.general && gameInfo.general.status}
+									{this.state.staffEntry && 'You are viewing this completed/abandoned game as a moderator. '}
 								</section>
-								<Gamechat userList={this.props.userList} gameInfo={gameInfo} userInfo={userInfo} socket={this.props.socket} allEmotes={this.props.allEmotes} />
+								<Gamechat
+									staffEntry={staffEntry}
+									userList={this.props.userList}
+									gameInfo={gameInfo}
+									userInfo={userInfo}
+									socket={this.props.socket}
+									allEmotes={this.props.allEmotes}
+								/>
 							</div>
 						</div>
 					</div>
@@ -181,6 +202,7 @@ export default class Game extends React.Component {
 							userInfo={userInfo}
 							gameInfo={gameInfo}
 							socket={this.props.socket}
+							staffEntry={staffEntry}
 						/>
 					</div>
 				</section>

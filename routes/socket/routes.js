@@ -53,29 +53,46 @@ const { TOU_CHANGES } = require('../../src/frontend-scripts/node-constants.js');
 const version = require('../../version');
 
 const gamesGarbageCollector = () => {
-	const currentTime = Date.now();
+	const currentTime = new Date();
 	Object.keys(games).forEach(gameName => {
-		// if (
-		// 	(games[gameName].general.modDelay && games[gameName].general.modDelay + 900000 < currentTime) ||
-		// 	(games[gameName].general.timeStarted && games[gameName].gameState.isCompleted && games[gameName].general.timeStarted + 4500000 < currentTime) ||
-		// 	(games[gameName].general.timeCreated &&
-		// 		games[gameName].general.timeCreated + 600000 < currentTime &&
-		// 		games[gameName].general.private &&
-		// 		games[gameName].publicPlayersState.length < 5)
-		// ) {
-		// 	console.log('Deleting: ' + gameName);
-		// 	// delete games[gameName];
-		// }
-		console.log(
-			gameName,
-			games[gameName].general.modDeleteDelay,
-			games[gameName].general.modDeleteDelay && games[gameName].general.modDelay + 900000 < currentTime,
+		let createdTimer =
+			games[gameName].general.timeCreated &&
+			games[gameName].gameState &&
+			!games[gameName].gameState.isStarted &&
+			new Date(games[gameName].general.timeCreated.getTime() + 1200000);
+		let completedTimer =
 			games[gameName].general.timeStarted &&
-				games[gameName].gameState &&
-				games[gameName].gameState.isCompleted &&
-				games[gameName].general.timeStarted + 4500000 < currentTime,
-			games[gameName].general.timeCreated && games[gameName].general.timeCreated + 600000 < currentTime && !games[gameName].gameState.isStarted
-		);
+			games[gameName].gameState &&
+			games[gameName].gameState.isCompleted &&
+			new Date(games[gameName].general.timeStarted + 4500000);
+		let modDeleteTimer = games[gameName].general.modDeleteDelay && new Date(games[gameName].general.modDeleteDelay.getTime() + 900000);
+		// console.log(
+		// 	'Name: ',
+		// 	gameName,
+		// 	'\nDelay: ',
+		// 	games[gameName].general.modDeleteDelay,
+		// 	'\nCurrent Time: ',
+		// 	currentTime,
+		// 	'\nDelay time: ',
+		// 	modDeleteTimer,
+		// 	'\nCompleted Time: ',
+		// 	completedTimer,
+		// 	'\nCreated Time: ',
+		// 	createdTimer
+		// );
+
+		if (games[gameName] && createdTimer && createdTimer < currentTime) {
+			// console.log('Created Timer Expired. Deleting... ');
+			delete games[gameName];
+		}
+		if (games[gameName] && modDeleteTimer && modDeleteTimer < currentTime) {
+			// console.log('Mod Delete Delay Timer Expired. Deleting... ');
+			delete games[gameName];
+		}
+		if (games[gameName] && !games[gameName].general.modDeleteDelay && completedTimer && completedTimer < currentTime) {
+			// console.log('Completed Game Timer Expired. Deleting... ');
+			delete games[gameName];
+		}
 	});
 
 	sendGameList();

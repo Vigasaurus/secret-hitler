@@ -339,6 +339,13 @@ class Gamechat extends React.Component {
 			};
 		}
 
+		if (this.props.staffEntry) {
+			return {
+				isDisabled: true,
+				placeholder: 'This game is over and will be deleted soon'
+			};
+		}
+
 		if (!userName) {
 			return {
 				isDisabled: true,
@@ -781,17 +788,19 @@ class Gamechat extends React.Component {
 						gameInfo.gameState &&
 						gameInfo.gameState.isStarted &&
 						this.renderModEndGameButtons()}
-					{!this.isPlayerInGame(gameInfo.publicPlayersState, userInfo.username) && isStaff && gameInfo && gameInfo.gameState && gameInfo.gameState.isStarted && (
+					{!this.isPlayerInGame(gameInfo.publicPlayersState, userInfo.username) && !this.props.staffEntry && isStaff && gameInfo && gameInfo.gameState && gameInfo.gameState.isStarted && (
 						<div>
 							<div className="ui button primary" onClick={() => modGetCurrentVotes()} style={{ width: '60px' }}>
 								Peek Votes
 							</div>
 						</div>
 					)}
-					{!this.isPlayerInGame(gameInfo.publicPlayersState, userInfo.username) && isStaff && gameInfo && gameInfo.gameState && gameInfo.gameState.isStarted && (
+					{!this.isPlayerInGame(gameInfo.publicPlayersState, userInfo.username) && !this.props.staffEntry && isStaff && gameInfo && gameInfo.gameState && gameInfo.gameState.isStarted && (
 						<div>
 							<div className="ui button primary" onClick={() => modFreezeGame()} style={{ width: '60px' }}>
-								Freeze/<br/>Unfreeze
+								Freeze/
+								<br />
+								Unfreeze
 							</div>
 						</div>
 					)}
@@ -1008,7 +1017,7 @@ class Gamechat extends React.Component {
 						if (gameInfo.gameState && gameInfo.gameState.isStarted && isStaff) {
 							return (
 								<div
-									className={hasNoAEM(gameInfo.publicPlayersState.map(player => player.userName)) ? 'ui primary button' : 'ui primary button disabled'}
+									className={hasNoAEM(gameInfo.publicPlayersState.map(player => player.userName) || this.props.staffEntry) ? 'ui primary button' : 'ui primary button disabled'}
 									title="Click here to subscribe to mod-only chat"
 									onClick={this.handleSubscribeModChat}
 								>
@@ -1171,7 +1180,8 @@ Gamechat.propTypes = {
 	updateIsTyping: PropTypes.func,
 	notesActive: PropTypes.bool,
 	toggleNotes: PropTypes.func,
-	isTyping: PropTypes.object
+	isTyping: PropTypes.object,
+	staffEntry: PropTypes.bool
 };
 
 const GamechatContainer = props => (
