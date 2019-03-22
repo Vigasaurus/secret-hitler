@@ -54,17 +54,28 @@ const version = require('../../version');
 
 const gamesGarbageCollector = () => {
 	const currentTime = Date.now();
-	const toRemoveGameNames = Object.keys(games).filter(
-		gameName =>
-			(games[gameName].general.timeStarted && games[gameName].general.timeStarted + 4200000 < currentTime) ||
-			(games[gameName].general.timeCreated &&
-				games[gameName].general.timeCreated + 600000 < currentTime &&
-				games[gameName].general.private &&
-				games[gameName].publicPlayersState.length < 5)
-	);
-
-	toRemoveGameNames.forEach(gameName => {
-		delete games[gameName];
+	Object.keys(games).forEach(gameName => {
+		// if (
+		// 	(games[gameName].general.modDelay && games[gameName].general.modDelay + 900000 < currentTime) ||
+		// 	(games[gameName].general.timeStarted && games[gameName].gameState.isCompleted && games[gameName].general.timeStarted + 4500000 < currentTime) ||
+		// 	(games[gameName].general.timeCreated &&
+		// 		games[gameName].general.timeCreated + 600000 < currentTime &&
+		// 		games[gameName].general.private &&
+		// 		games[gameName].publicPlayersState.length < 5)
+		// ) {
+		// 	console.log('Deleting: ' + gameName);
+		// 	// delete games[gameName];
+		// }
+		console.log(
+			gameName,
+			games[gameName].general.modDeleteDelay,
+			games[gameName].general.modDeleteDelay && games[gameName].general.modDelay + 900000 < currentTime,
+			games[gameName].general.timeStarted &&
+				games[gameName].gameState &&
+				games[gameName].gameState.isCompleted &&
+				games[gameName].general.timeStarted + 4500000 < currentTime,
+			games[gameName].general.timeCreated && games[gameName].general.timeCreated + 600000 < currentTime && !games[gameName].gameState.isStarted
+		);
 	});
 
 	sendGameList();
@@ -93,7 +104,7 @@ const ensureInGame = (passport, game) => {
 };
 
 module.exports = (modUserNames, editorUserNames, adminUserNames, altmodUserNames, trialmodUserNames, contributorUserNames) => {
-	setInterval(gamesGarbageCollector, 100000);
+	setInterval(gamesGarbageCollector, 10000);
 
 	io.on('connection', socket => {
 		checkUserStatus(socket, () => {

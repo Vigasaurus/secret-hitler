@@ -252,11 +252,18 @@ const handleSocketDisconnect = socket => {
 				const { gameState, publicPlayersState } = game;
 				const playerIndex = publicPlayersState.findIndex(player => player.userName === passport.user);
 
-				if (
-					(!gameState.isStarted && publicPlayersState.length === 1) ||
-					(gameState.isCompleted && publicPlayersState.filter(player => !player.connected || player.leftGame).length === game.general.playerCount - 1)
-				) {
-					delete games[gameName];
+				if (!gameState.isStarted && publicPlayersState.length === 1) {
+					console.log('Single player left, setting moddeletedelay');
+					if (!games[game.general.uid].general.modDeleteDelay) {
+						games[game.general.uid].general.modDeleteDelay = new Date();
+					}
+					// delete games[game.general.uid];
+				}
+				if (gameState.isCompleted && publicPlayersState.filter(player => !player.connected || player.leftGame).length === game.general.playerCount - 1) {
+					console.log('Completed + Everyone left, setting moddeletedelay');
+					if (!games[game.general.uid].general.modDeleteDelay) {
+						games[game.general.uid].general.modDeleteDelay = new Date();
+					}
 				} else if (!gameState.isTracksFlipped && playerIndex > -1) {
 					publicPlayersState.splice(playerIndex, 1);
 					checkStartConditions(game);
@@ -266,7 +273,10 @@ const handleSocketDisconnect = socket => {
 					publicPlayersState[playerIndex].leftGame = true;
 					sendInProgressGameUpdate(game);
 					if (game.publicPlayersState.filter(publicPlayer => publicPlayer.leftGame).length === game.general.playerCount) {
-						delete games[game.general.uid];
+						console.log('Incomplete + Everyone left, setting moddeletedelay');
+						if (!games[game.general.uid].general.modDeleteDelay) {
+							games[game.general.uid].general.modDeleteDelay = new Date();
+						}
 					}
 				}
 			});
