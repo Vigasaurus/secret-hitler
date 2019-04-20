@@ -2244,6 +2244,36 @@ module.exports.handleUpdateWhitelist = (passport, game, data) => {
 	}
 };
 
+module.exports.handleGetGeneralChatState = (socket, passport) => {
+	const user = userList.find(u => u.userName === passport.user);
+	if (!user || user.isPrivate) return;
+	if (Object.values(games).length > 0) {
+		const game = Object.values(games).find(game => game.publicPlayersState.find(u => u.userName === user.userName));
+		if (game) {
+			const { publicPlayersState } = game;
+			const isDead = () => {
+				if (user.userName && publicPlayersState.length && publicPlayersState.find(player => user.userName === player.userName)) {
+					return publicPlayersState.find(player => user.userName === player.userName).isDead;
+				}
+			};
+			const disableChat = game.general.disableChat;
+			const isCompleted = game.gameState.isCompleted;
+			const isStarted = game.gameState.isStarted;
+			console.log('Gen State', user.userName, 'Chat Disabled: ', disableChat, 'isCompleted: ', isCompleted, 'isStarted: ', isStarted, 'isDead: ', isDead());
+
+			socket.emit('receiveUserGameInfo', {
+				gameState: game.gameState,
+				general: game.general,
+				publicPlayersState: game.publicPlayersState
+			});
+		} else {
+			socket.emit('receiveUserGameInfo', null);
+		}
+	} else {
+		socket.emit('receiveUserGameInfo', null);
+	}
+};
+
 /**
  * @param {object} socket - socket reference.
  * @param {object} passport - socket authentication.
@@ -2263,27 +2293,28 @@ module.exports.handleNewGeneralChat = (socket, passport, data, modUserNames, edi
 				general: game.general,
 				publicPlayersState: game.publicPlayersState
 			});
+
+			const { publicPlayersState } = game;
+			const isDead = () => {
+				if (user.userName && publicPlayersState.length && publicPlayersState.find(player => user.userName === player.userName)) {
+					return publicPlayersState.find(player => user.userName === player.userName).isDead;
+				}
+			};
+			const disableChat = game.general.disableChat;
+			const isCompleted = game.gameState.isCompleted;
+			const isStarted = game.gameState.isStarted;
+			console.log('New Chat', user.userName, 'Chat Disabled: ', disableChat, 'isCompleted: ', isCompleted, 'isStarted: ', isStarted, 'isDead: ', isDead());
+			if (user.staffRole === '') {
+				if (isDead() && !isCompleted) {
+					return;
+				}
+				// Temporarily Not Doing this one - waiting for consensus
+				// if (disableChat && !isCompleted && isStarted) {
+				// 	return;
+				// }
+			}
 		} else {
 			socket.emit('receiveUserGameInfo', null);
-		}
-
-		const { publicPlayersState } = game;
-		const isDead = () => {
-			if (user.userName && publicPlayersState.length && publicPlayersState.find(player => user.userName === player.userName)) {
-				return publicPlayersState.find(player => user.userName === player.userName).isDead;
-			}
-		};
-		const disableChat = game.general.disableChat;
-		const isCompleted = game.gameState.isCompleted;
-		const isStarted = game.gameState.isStarted;
-		console.log(user.userName, 'Chat: ', disableChat, 'isCompleted: ', isCompleted, 'isStarted: ', isStarted, 'isDead: ', isDead());
-		if (user.staffRole === '') {
-			if (isDead() && !isCompleted) {
-				return;
-			}
-			if (disableChat && !isCompleted && isStarted) {
-				return;
-			}
 		}
 	}
 

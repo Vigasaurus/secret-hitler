@@ -6,6 +6,7 @@ import { Scrollbars } from 'react-custom-scrollbars';
 import moment from 'moment';
 
 export default class Generalchat extends React.Component {
+	chatStateTimer;
 	state = {
 		lock: false,
 		discordEnabled: false,
@@ -23,6 +24,8 @@ export default class Generalchat extends React.Component {
 		}
 
 		this.props.socket.on('receiveUserGameInfo', info => this.setState({ gameInfo: info }));
+
+		this.chatStateTimer = setInterval(() => this.props.socket.emit('getGeneralChatState'), 2500);
 	}
 
 	componentWillReceiveProps(nextProps) {
@@ -40,6 +43,10 @@ export default class Generalchat extends React.Component {
 		if (!this.state.lock && !this.state.discordEnabled) {
 			this.scrollbar.scrollToBottom();
 		}
+	}
+
+	componentWillUnmount() {
+		clearInterval(this.chatStateTimer);
 	}
 
 	renderPreviousSeasonAward(type) {
@@ -159,6 +166,14 @@ export default class Generalchat extends React.Component {
 				placeholder: 'Please reload...'
 			};
 		}
+
+		if (userInfo.gameSettings && userInfo.gameSettings.isPrivate) {
+			return {
+				isDisabled: true,
+				placeholder: 'Your account is private'
+			};
+		}
+
 		if (!this.state.gameInfo) {
 			return {
 				isDisabled: false,
@@ -189,12 +204,14 @@ export default class Generalchat extends React.Component {
 			};
 		}
 
-		if (gameInfo.general.disableChat && !gameState.isCompleted && gameState.isStarted) {
-			return {
-				isDisabled: true,
-				placeholder: `Your game's chat is disabled`
-			};
-		}
+		// Temporarily Not Doing this one - waiting on consensus
+		// if (gameInfo.general.disableChat) {
+		// 	// && !gameState.isCompleted && gameState.isStarted) {
+		// 	return {
+		// 		isDisabled: true,
+		// 		placeholder: `Your game's chat is disabled`
+		// 	};
+		// }
 		if (user.wins + user.losses < 2) {
 			return {
 				isDisabled: true,
@@ -245,7 +262,6 @@ export default class Generalchat extends React.Component {
 				)}
 				<textarea
 					style={{ zIndex: 1 }}
-					disabled={!userInfo.userName || (userInfo.gameSettings && userInfo.gameSettings.isPrivate)}
 					className="chat-input-box"
 					value={this.state.chatValue}
 					placeholder={this.chatStatus().placeholder}
@@ -254,6 +270,7 @@ export default class Generalchat extends React.Component {
 					onKeyDown={this.handleKeyPress}
 					onChange={this.handleTyping}
 					ref={c => (this.chatInput = c)}
+					disabled={this.chatStatus().isDisabled}
 				/>
 				{!this.chatStatus().isDisabled ? renderEmotesButton(this.handleInsertEmote, this.props.allEmotes) : null}
 				<div className="chat-button">

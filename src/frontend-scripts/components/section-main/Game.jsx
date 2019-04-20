@@ -16,7 +16,7 @@ export default class Game extends React.Component {
 
 	componentDidMount() {
 		const { userInfo } = this.props;
-
+		this.props.socket.emit('getGeneralChatState');
 		if (userInfo && userInfo.userName && userInfo.gameSettings && !userInfo.gameSettings.disableTyping) {
 			const { isTyping } = this.state;
 
@@ -114,6 +114,10 @@ export default class Game extends React.Component {
 		) {
 			window.location.hash = '#/';
 		}
+	}
+
+	componentWillUnmount() {
+		this.props.socket.emit('getGeneralChatState');
 	}
 
 	updateIsTyping = isClear => {

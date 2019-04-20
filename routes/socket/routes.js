@@ -3,6 +3,7 @@ const {
 	handleUpdatedReportGame,
 	handleAddNewGame,
 	handleAddNewGameChat,
+	handleGetGeneralChatState,
 	handleNewGeneralChat,
 	handleUpdatedGameSettings,
 	handleSocketDisconnect,
@@ -255,7 +256,11 @@ module.exports = (modUserNames, editorUserNames, adminUserNames, altmodUserNames
 					handleUpdatedGameSettings(socket, passport, data);
 				}
 			});
-
+			socket.on('getGeneralChatState', () => {
+				if (authenticated) {
+					handleGetGeneralChatState(socket, passport);
+				}
+			});
 			socket.on('addNewGeneralChat', data => {
 				if (isRestricted) return;
 				if (authenticated) {
